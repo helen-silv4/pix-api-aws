@@ -14,24 +14,24 @@ def decimal_para_json(obj):
 
 def lambda_handler(event, context):
     try:
-        usuario_id = None
+        conta_id = None
 
         path_params = event.get("pathParameters") or {}
         query_params = event.get("queryStringParameters") or {}
 
-        if path_params.get("usuarioId"):
-            usuario_id = path_params["usuarioId"]
-        elif query_params.get("usuarioId"):
-            usuario_id = query_params["usuarioId"]
+        if path_params.get("contaId"):
+            conta_id = path_params["contaId"]
+        elif query_params.get("contaId"):
+            conta_id = query_params["contaId"]
 
-        if not usuario_id:
+        if not conta_id:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"mensagem": "usuarioId é obrigatório"})
+                "body": json.dumps({"mensagem": "contaId é obrigatório"})
             }
 
         resposta = tabela.get_item(
-            Key={"usuarioId": usuario_id}
+            Key={"contaId": conta_id}
         )
 
         item = resposta.get("Item")
@@ -39,7 +39,7 @@ def lambda_handler(event, context):
         if not item:
             return {
                 "statusCode": 404,
-                "body": json.dumps({"mensagem": "Usuário não encontrado"})
+                "body": json.dumps({"mensagem": "Conta não encontrada"})
             }
 
         return {
