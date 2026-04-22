@@ -79,21 +79,26 @@ def validar_token(event):
         return montar_resposta(401, "Token inválido")
 
 
-def consultar_saldo(event):
-    conta_id = None
+def consultar_saldo(event, payload):
+    conta_id_token = payload.get("contaId")
+
+    if not conta_id_token:
+        return montar_resposta(401, "Token sem contaId")
 
     path_params = event.get("pathParameters") or {}
     query_params = event.get("queryStringParameters") or {}
 
+    conta_id_param = None
+
     if path_params.get("contaId"):
-        conta_id = path_params["contaId"]
+        conta_id_param = path_params["contaId"]
     elif query_params.get("contaId"):
-        conta_id = query_params["contaId"]
+        conta_id_param = query_params["contaId"]
 
-    if not conta_id:
-        return montar_resposta(400, "contaId é obrigatório")
+    if conta_id_param and conta_id_param != conta_id_token:
+        return montar_resposta(403, "Acesso não permitido para esta conta")
 
-    conta = buscar_conta_por_id(conta_id)
+    conta = buscar_conta_por_id(conta_id_token)
 
     if not conta:
         return montar_resposta(404, "Conta não encontrada")
@@ -103,30 +108,32 @@ def consultar_saldo(event):
         "body": json.dumps(conta, default=converter_decimal_para_json)
     }
 
-def transferir(event):
+def transferir(event, payload):
+    conta_id_token = payload.get("contaId")
 
-    # corpo
+    if not conta_id_token:
+        return montar_resposta(401, "Token sem contaId")
+
     body = event.get("body")
 
     if not body:
         return montar_resposta(400, "Body é obrigatório")
 
     try:
-        dados = json.loads(body) # transforma para dicionário
+        dados = json.loads(body)
     except json.JSONDecodeError:
         return montar_resposta(400, "JSON inválido")
 
-    origem = dados.get("origem")
+    origem = conta_id_token
     destino = dados.get("destino")
     valor = dados.get("valor")
 
-    if not origem or not destino or valor is None:
-        return montar_resposta(400, "origem, destino e valor são obrigatórios")
+    if not destino or valor is None:
+        return montar_resposta(400, "destino e valor são obrigatórios")
 
     if origem == destino:
         return montar_resposta(400, "Origem e destino não podem ser iguais")
 
-    # saldo
     try:
         valor = Decimal(str(valor))
     except Exception:
@@ -174,12 +181,17 @@ def transferir(event):
         )
     }
 
-def consultar_extrato(event):
-    query_params = event.get("queryStringParameters") or {}
-    conta_id = query_params.get("contaId")
+def consultar_extrato(event, payload):
+    conta_id_token = payload.get("contaId")
 
-    if not conta_id:
-        return montar_resposta(400, "contaId é obrigatório")
+    if not conta_id_token:
+        return montar_resposta(401, "Token sem contaId")
+
+    query_params = event.get("queryStringParameters") or {}
+    conta_id_param = query_params.get("contaId")
+
+    if conta_id_param and conta_id_param != conta_id_token:
+        return montar_resposta(403, "Acesso não permitido para esta conta")
 
     # busca os dados
     resposta = tabela_transacoes.scan()
@@ -187,8 +199,11 @@ def consultar_extrato(event):
 
     # filtra
     extrato = []
-    for transacao in todas_transacoes: 
-        if transacao.get("origem") == conta_id or transacao.get("destino") == conta_id: 
+    for transacao in todas_transacoes:
+        if (
+            transacao.get("origem") == conta_id_token
+            or transacao.get("destino") == conta_id_token
+        ):
             extrato.append(transacao)
 
     # ordenar por data mais recente
@@ -206,17 +221,18 @@ def lambda_handler(event, context):
 
         if "statusCode" in resultado:
             return resultado
+        
         payload = resultado
 
         rota = event.get("rawPath")
         metodo = event.get("requestContext", {}).get("http", {}).get("method")
 
         if rota == "/saldo" and metodo == "GET":
-            return consultar_saldo(event)
+            return consultar_saldo(event, payload)
         if rota == "/transferencia" and metodo == "POST":
-            return transferir(event)
+            return transferir(event, payload)
         if rota == "/extrato" and metodo == "GET":
-            return consultar_extrato(event)
+            return consultar_extrato(event, payload)
 
         return montar_resposta(404, "Rota não encontrada")
 
