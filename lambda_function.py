@@ -78,6 +78,21 @@ def validar_token(event):
     except jwt.InvalidTokenError:
         return montar_resposta(401, "Token inválido")
 
+# logs
+def log_info(mensagem, **dados):
+    print(json.dumps({
+        "nivel": "INFO",
+        "mensagem": mensagem,
+        "dados": dados
+    }, default=converter_decimal_para_json))
+
+def log_error(mensagem, **dados):
+    print(json.dumps({
+        "nivel": "ERROR",
+        "mensagem": mensagem,
+        "dados": dados
+    }, default=converter_decimal_para_json))
+
 
 def consultar_saldo(event, payload):
     conta_id_token = payload.get("contaId")
@@ -98,10 +113,13 @@ def consultar_saldo(event, payload):
     if conta_id_param and conta_id_param != conta_id_token:
         return montar_resposta(403, "Acesso não permitido para esta conta")
 
+    log_info("Consultando saldo", contaId=conta_id_token)
     conta = buscar_conta_por_id(conta_id_token)
 
     if not conta:
         return montar_resposta(404, "Conta não encontrada")
+
+    log_info("Saldo consultado com sucesso", contaId=conta_id_token)
 
     return {
         "statusCode": 200,
@@ -109,13 +127,13 @@ def consultar_saldo(event, payload):
     }
 
 def transferir(event, payload):
-    conta_id_token = payload.get("contaId")
+    conta_id_token = payload.get("contaId") 
+    log_info("Iniciando transferência", contaToken=conta_id_token)
 
     if not conta_id_token:
         return montar_resposta(401, "Token sem contaId")
 
     body = event.get("body")
-
     if not body:
         return montar_resposta(400, "Body é obrigatório")
 
@@ -127,13 +145,12 @@ def transferir(event, payload):
     origem = dados.get("origem")
     destino = dados.get("destino")
     valor = dados.get("valor")
+    log_info("Dados de transferência recebidos", origem=origem, destino=destino, valor=valor)
 
     if not origem or not destino or valor is None:
         return montar_resposta(400, "origem, destino e valor são obrigatórios")
-
     if origem != conta_id_token:
         return montar_resposta(403, "Você só pode transferir a partir da sua própria conta")
-
     if origem == destino:
         return montar_resposta(400, "Origem e destino não podem ser iguais")
 
@@ -150,7 +167,6 @@ def transferir(event, payload):
 
     if not conta_origem:
         return montar_resposta(404, "Conta de origem não encontrada")
-
     if not conta_destino:
         return montar_resposta(404, "Conta de destino não encontrada")
 
@@ -158,6 +174,7 @@ def transferir(event, payload):
     saldo_destino = conta_destino["saldo"]
 
     if saldo_origem < valor:
+        log_error("Transferência recusada por saldo insuficiente", origem=origem, destino=destino, valor=valor, saldoOrigem=saldo_origem)
         return montar_resposta(400, "Saldo insuficiente")
 
     novo_saldo_origem = saldo_origem - valor
@@ -167,6 +184,7 @@ def transferir(event, payload):
     atualizar_saldo(destino, novo_saldo_destino)
 
     transacao_id = registrar_transacao(origem, destino, valor, "SUCESSO")
+    log_info("Transferência realizada com sucesso", transacaoId=transacao_id, origem=origem, destino=destino, valor=valor)
 
     return {
         "statusCode": 200,
@@ -212,6 +230,8 @@ def consultar_extrato(event, payload):
     # ordenar por data mais recente
     extrato.sort(key=lambda x: x.get("criadoEm"), reverse=True)
 
+    log_info("Extrato consultado com sucesso", contaId=conta_id_token, quantidadeTransacoes=len(extrato))
+
     return {
         "statusCode": 200,
         "body": json.dumps(extrato, default=converter_decimal_para_json)
@@ -230,6 +250,8 @@ def lambda_handler(event, context):
         rota = event.get("rawPath")
         metodo = event.get("requestContext", {}).get("http", {}).get("method")
 
+        log_info("Requisição recebida", rota=rota, metodo=metodo)
+
         if rota == "/saldo" and metodo == "GET":
             return consultar_saldo(event, payload)
         if rota == "/transferencia" and metodo == "POST":
@@ -240,6 +262,7 @@ def lambda_handler(event, context):
         return montar_resposta(404, "Rota não encontrada")
 
     except Exception as e:
+        log_error("Erro interno na lambda", erro=str(e))
         return {
             "statusCode": 500,
             "body": json.dumps({
