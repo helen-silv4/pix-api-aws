@@ -2,7 +2,7 @@ import json
 import boto3
 import uuid
 from decimal import Decimal
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # conexão dynamo
@@ -150,6 +150,31 @@ def transferir(event):
         )
     }
 
+def consultar_extrato(event):
+    query_params = event.get("queryStringParameters") or {}
+    conta_id = query_params.get("contaId")
+
+    if not conta_id:
+        return montar_resposta(400, "contaId é obrigatório")
+
+    # busca os dados
+    resposta = tabela_transacoes.scan()
+    todas_transacoes = resposta.get("Items", [])
+
+    # filtra
+    extrato = []
+    for transacao in todas_transacoes: 
+        if transacao.get("origem") == conta_id or transacao.get("destino") == conta_id: 
+            extrato.append(transacao)
+
+    # ordenar por data mais recente
+    extrato.sort(key=lambda x: x.get("criadoEm"), reverse=True)
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps(extrato, default=converter_decimal_para_json)
+    }
+
 def lambda_handler(event, context):
     try:
         rota = event.get("rawPath")
@@ -160,6 +185,9 @@ def lambda_handler(event, context):
 
         if rota == "/transferencia" and metodo == "POST":
             return transferir(event)
+        
+        if rota == "/extrato" and metodo == "GET":
+            return consultar_extrato(event)
 
         return montar_resposta(404, "Rota não encontrada")
 
