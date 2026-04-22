@@ -3,6 +3,7 @@ import boto3
 import uuid
 from decimal import Decimal
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 # conexão dynamo
 dynamodb = boto3.resource("dynamodb")
@@ -38,7 +39,7 @@ def atualizar_saldo(conta_id, novo_saldo):
 
 def registrar_transacao(origem, destino, valor, status):
     transacao_id = str(uuid.uuid4())
-    criado_em = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    criado_em = datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%Y-%m-%dT%H:%M:%S")
 
     tabela_transacoes.put_item(
         Item={
