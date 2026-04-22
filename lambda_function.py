@@ -1,10 +1,13 @@
 import json
 import boto3
+import uuid
 from decimal import Decimal
+from datetime import datetime, timezone
 
 # conexão dynamo
 dynamodb = boto3.resource("dynamodb")
-tabela = dynamodb.Table("tb_contas")
+tabela_contas = dynamodb.Table("tb_contas")
+tabela_transacoes = dynamodb.Table("tb_transacoes")
 
 # funções auxiliares
 def converter_decimal_para_json(valor):
@@ -19,19 +22,37 @@ def montar_resposta(status_code, mensagem):
     }
 
 def buscar_conta_por_id(conta_id):
-    resposta = tabela.get_item(
+    resposta = tabela_contas.get_item(
         Key={"contaId": conta_id}
     )
     return resposta.get("Item")
 
 def atualizar_saldo(conta_id, novo_saldo):
-    tabela.update_item(
+    tabela_contas.update_item(
         Key={"contaId": conta_id},
         UpdateExpression="SET saldo = :novo_saldo",
         ExpressionAttributeValues={
             ":novo_saldo": novo_saldo
         }
     )
+
+def registrar_transacao(origem, destino, valor, status):
+    transacao_id = str(uuid.uuid4())
+    criado_em = datetime.now(timezone.utc).isoformat()
+
+    tabela_transacoes.put_item(
+        Item={
+            "transacaoId": transacao_id,
+            "origem": origem,
+            "destino": destino,
+            "valor": valor,
+            "status": status,
+            "criadoEm": criado_em
+        }
+    )
+
+    return transacao_id
+ 
 
 def consultar_saldo(event):
     conta_id = None
@@ -56,7 +77,6 @@ def consultar_saldo(event):
         "statusCode": 200,
         "body": json.dumps(conta, default=converter_decimal_para_json)
     }
-
 
 def transferir(event):
 
@@ -111,11 +131,14 @@ def transferir(event):
     atualizar_saldo(origem, novo_saldo_origem)
     atualizar_saldo(destino, novo_saldo_destino)
 
+    transacao_id = registrar_transacao(origem, destino, valor, "SUCESSO")
+
     return {
         "statusCode": 200,
         "body": json.dumps(
             {
                 "mensagem": "Transferência realizada",
+                "transacaoId": transacao_id,
                 "origem": origem,
                 "destino": destino,
                 "valor": valor,
