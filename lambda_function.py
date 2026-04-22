@@ -1,6 +1,7 @@
 import json
 import boto3
 import uuid
+import jwt
 from decimal import Decimal
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -9,6 +10,9 @@ from zoneinfo import ZoneInfo
 dynamodb = boto3.resource("dynamodb")
 tabela_contas = dynamodb.Table("tb_contas")
 tabela_transacoes = dynamodb.Table("tb_transacoes")
+
+# token 
+SECRET = "chave-secreta-geracao-token-com-jwt"
 
 # funções auxiliares
 def converter_decimal_para_json(valor):
@@ -54,6 +58,26 @@ def registrar_transacao(origem, destino, valor, status):
 
     return transacao_id
  
+def validar_token(event):
+    headers = event.get("headers") or {}
+    authorization = headers.get("authorization") or headers.get("Authorization")
+
+    if not authorization:
+        return montar_resposta(401, "Token não informado")
+
+    if not authorization.startswith("Bearer "):
+        return montar_resposta(401, "Formato do token inválido")
+
+    token = authorization.split(" ")[1]
+
+    try:
+        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+        return payload  # sucesso
+    except jwt.ExpiredSignatureError:
+        return montar_resposta(401, "Token expirado")
+    except jwt.InvalidTokenError:
+        return montar_resposta(401, "Token inválido")
+
 
 def consultar_saldo(event):
     conta_id = None
@@ -177,15 +201,20 @@ def consultar_extrato(event):
 
 def lambda_handler(event, context):
     try:
+        # valida token
+        resultado = validar_token(event)
+
+        if "statusCode" in resultado:
+            return resultado
+        payload = resultado
+
         rota = event.get("rawPath")
         metodo = event.get("requestContext", {}).get("http", {}).get("method")
 
         if rota == "/saldo" and metodo == "GET":
             return consultar_saldo(event)
-
         if rota == "/transferencia" and metodo == "POST":
             return transferir(event)
-        
         if rota == "/extrato" and metodo == "GET":
             return consultar_extrato(event)
 

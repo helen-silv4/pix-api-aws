@@ -1,4 +1,13 @@
+# python
 __pycache__/
 *.pyc
-function.zip
 .env
+
+# lambda
+deploy/
+lambda.zip
+function.zip
+
+# dependências locais
+jwt/
+*.dist-info/
