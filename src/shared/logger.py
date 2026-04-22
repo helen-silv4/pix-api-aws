@@ -1,5 +1,5 @@
 import json
-from shared.serializers import converter_decimal_para_json
+from src.shared.serializers import converter_decimal_para_json
 
 def log_info(mensagem, **dados):
     print(json.dumps({

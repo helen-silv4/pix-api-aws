@@ -1,10 +1,10 @@
 import json
 from decimal import Decimal
-from output.conta_repository import buscar_conta_por_id, atualizar_saldo
-from output.transacao_repository import registrar_transacao
-from shared.logger import log_info, log_error
-from shared.response import montar_resposta, montar_resposta_json
-from shared.serializers import converter_decimal_para_json
+from src.output.conta_repository import buscar_conta_por_id, atualizar_saldo
+from src.output.transacao_repository import registrar_transacao
+from src.shared.logger import log_info, log_error
+from src.shared.response import montar_resposta, montar_resposta_json
+from src.shared.serializers import converter_decimal_para_json
 
 def transferir(event, payload):
     conta_id_token = payload.get("contaId")

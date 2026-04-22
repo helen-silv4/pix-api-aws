@@ -1,5 +1,5 @@
 import boto3
-from shared.config import TABELA_CONTAS
+from src.shared.config import TABELA_CONTAS
 
 # conexão dynamo
 dynamodb = boto3.resource("dynamodb")

@@ -2,7 +2,7 @@ import boto3
 import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from shared.config import TABELA_TRANSACOES
+from src.shared.config import TABELA_TRANSACOES
 
 # conexão dynamo
 dynamodb = boto3.resource("dynamodb")

@@ -1,6 +1,6 @@
 import jwt
-from shared.config import SECRET
-from shared.response import montar_resposta
+from src.shared.config import SECRET
+from src.shared.response import montar_resposta
 
 def validar_token(event):
     headers = event.get("headers") or {}

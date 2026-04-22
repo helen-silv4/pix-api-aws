@@ -1,7 +1,7 @@
-from output.transacao_repository import listar_transacoes
-from shared.logger import log_info
-from shared.response import montar_resposta, montar_resposta_json
-from shared.serializers import converter_decimal_para_json
+from src.output.transacao_repository import listar_transacoes
+from src.shared.logger import log_info
+from src.shared.response import montar_resposta, montar_resposta_json
+from src.shared.serializers import converter_decimal_para_json
 
 def consultar_extrato(event, payload):
     conta_id_token = payload.get("contaId")
