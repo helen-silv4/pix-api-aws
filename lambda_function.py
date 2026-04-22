@@ -128,7 +128,7 @@ def consultar_saldo(event, payload):
 
 def transferir(event, payload):
     conta_id_token = payload.get("contaId") 
-    log_info("Iniciando transferência", contaToken=conta_id_token)
+    log_info("Iniciando transferencia", contaToken=conta_id_token)
 
     if not conta_id_token:
         return montar_resposta(401, "Token sem contaId")
@@ -145,7 +145,7 @@ def transferir(event, payload):
     origem = dados.get("origem")
     destino = dados.get("destino")
     valor = dados.get("valor")
-    log_info("Dados de transferência recebidos", origem=origem, destino=destino, valor=valor)
+    log_info("Dados de transferencia recebidos", origem=origem, destino=destino, valor=valor)
 
     if not origem or not destino or valor is None:
         return montar_resposta(400, "origem, destino e valor são obrigatórios")
@@ -174,7 +174,7 @@ def transferir(event, payload):
     saldo_destino = conta_destino["saldo"]
 
     if saldo_origem < valor:
-        log_error("Transferência recusada por saldo insuficiente", origem=origem, destino=destino, valor=valor, saldoOrigem=saldo_origem)
+        log_error("Transferencia recusada por saldo insuficiente", origem=origem, destino=destino, valor=valor, saldoOrigem=saldo_origem)
         return montar_resposta(400, "Saldo insuficiente")
 
     novo_saldo_origem = saldo_origem - valor
@@ -184,7 +184,7 @@ def transferir(event, payload):
     atualizar_saldo(destino, novo_saldo_destino)
 
     transacao_id = registrar_transacao(origem, destino, valor, "SUCESSO")
-    log_info("Transferência realizada com sucesso", transacaoId=transacao_id, origem=origem, destino=destino, valor=valor)
+    log_info("Transferencia realizada com sucesso", transacaoId=transacao_id, origem=origem, destino=destino, valor=valor)
 
     return {
         "statusCode": 200,
@@ -250,7 +250,7 @@ def lambda_handler(event, context):
         rota = event.get("rawPath")
         metodo = event.get("requestContext", {}).get("http", {}).get("method")
 
-        log_info("Requisição recebida", rota=rota, metodo=metodo)
+        log_info("Requisicao recebida", rota=rota, metodo=metodo)
 
         if rota == "/saldo" and metodo == "GET":
             return consultar_saldo(event, payload)
