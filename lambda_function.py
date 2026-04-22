@@ -124,12 +124,15 @@ def transferir(event, payload):
     except json.JSONDecodeError:
         return montar_resposta(400, "JSON inválido")
 
-    origem = conta_id_token
+    origem = dados.get("origem")
     destino = dados.get("destino")
     valor = dados.get("valor")
 
-    if not destino or valor is None:
-        return montar_resposta(400, "destino e valor são obrigatórios")
+    if not origem or not destino or valor is None:
+        return montar_resposta(400, "origem, destino e valor são obrigatórios")
+
+    if origem != conta_id_token:
+        return montar_resposta(403, "Você só pode transferir a partir da sua própria conta")
 
     if origem == destino:
         return montar_resposta(400, "Origem e destino não podem ser iguais")
