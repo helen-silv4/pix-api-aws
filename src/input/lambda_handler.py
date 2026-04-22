@@ -1,10 +1,10 @@
 import json
-from service.extrato_service import consultar_extrato
-from service.saldo_service import consultar_saldo
-from service.transferencia_service import transferir
-from shared.auth import validar_token
-from shared.logger import log_error, log_info
-from shared.response import montar_resposta
+from src.service.extrato_service import consultar_extrato
+from src.service.saldo_service import consultar_saldo
+from src.service.transferencia_service import transferir
+from src.shared.auth import validar_token
+from src.shared.logger import log_error, log_info
+from src.shared.response import montar_resposta
 
 def lambda_handler(event, context):
     try:
